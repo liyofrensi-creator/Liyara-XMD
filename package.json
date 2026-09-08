@@ -1,0 +1,13 @@
+{
+  "name": "liyara-whatsapp-bot",
+  "version": "1.0.0",
+  "description": "Liyara WhatsApp Base Bot with Menu and Alive",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.5",
+    "pino": "^9.0.0"
+  }
+}
