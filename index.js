@@ -1,9 +1,8 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('gifted-baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const config = require('./config');
 const readline = require('readline');
 
-// ටර්මිනල් එකෙන් ෆෝන් නම්බර් එක ඉල්ලීමට අවශ්‍ය සෙටප් එක
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
@@ -13,16 +12,15 @@ async function startLiyara() {
     const sock = makeWASocket({
         logger: pino({ level: 'silent' }),
         auth: state,
-        printQRInTerminal: false, // QR කෝඩ් එක ඕෆ් කිරීම
-        browser: Browsers.macOS("Chrome") // කනෙක්ෂන් එක ස්ථාවර කිරීමට
+        printQRInTerminal: false
     });
 
-    // බෝට් එක පටන් ගනිද්දී Pairing Code එක ලබා ගැනීම
     if (!sock.authState.creds.registered) {
         console.log('\n========================================');
         const phoneNumber = await question('📱 ඔයාගේ WhatsApp නම්බර් එක රටේ කෝඩ් එකත් එක්ක දාන්න (උදා: 94771234567): ');
         console.log('========================================\n');
         
+        await new Promise(resolve => setTimeout(resolve, 3000)); // සර්වර් එකට කනෙක්ට් වෙන්න පොඩි වෙලාවක් දීම
         let code = await sock.requestPairingCode(phoneNumber.trim().replace(/[^0-9]/g, ''));
         code = code?.match(/.{1,4}/g)?.join('-') || code;
         
