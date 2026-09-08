@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('gifted-baileys');
 const pino = require('pino');
 const config = require('./config');
 const readline = require('readline');
@@ -13,16 +13,21 @@ async function startLiyara() {
     const sock = makeWASocket({
         logger: pino({ level: 'silent' }),
         auth: state,
-        printQRInTerminal: false // QR කෝඩ් එක ඕෆ් කිරීම
+        printQRInTerminal: false, // QR කෝඩ් එක ඕෆ් කිරීම
+        browser: Browsers.macOS("Chrome") // කනෙක්ෂන් එක ස්ථාවර කිරීමට
     });
 
     // බෝට් එක පටන් ගනිද්දී Pairing Code එක ලබා ගැනීම
     if (!sock.authState.creds.registered) {
-        const phoneNumber = await question('\n📱 ඔයාගේ WhatsApp නම්බර් එක රටේ කෝඩ් එකත් එක්ක දාන්න (උදා: 94771234567): ');
-        let code = await sock.requestPairingCode(phoneNumber.trim());
+        console.log('\n========================================');
+        const phoneNumber = await question('📱 ඔයාගේ WhatsApp නම්බර් එක රටේ කෝඩ් එකත් එක්ක දාන්න (උදා: 94771234567): ');
+        console.log('========================================\n');
+        
+        let code = await sock.requestPairingCode(phoneNumber.trim().replace(/[^0-9]/g, ''));
         code = code?.match(/.{1,4}/g)?.join('-') || code;
+        
         console.log(`\n🔗 ඔන්න ඔයාගේ Pairing Code එක: \x1b[32m${code}\x1b[0m\n`);
-        console.log('ඔයාගේ WhatsApp එකට ගිහින් Linked Devices -> Link with phone number යන තැනට ගිහින් මේ කෝඩ් එක දෙන්න!');
+        console.log('💡 ඔයාගේ WhatsApp එකට ගිහින් Linked Devices -> Link with phone number යන තැනට ගිහින් මේ කෝඩ් එක දෙන්න!\n');
     }
 
     sock.ev.on('creds.update', saveCreds);
@@ -34,7 +39,10 @@ async function startLiyara() {
         } else if (connection === 'close') {
             const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
             if (shouldReconnect) {
+                console.log('🔄 කනෙක්ෂන් එක බිඳුණා, නැවත සම්බන්ධ වෙමින් පවතී...');
                 startLiyara();
+            } else {
+                console.log('❌ ලොග් අව් වී ඇත. කරුණාකර auth_info ෆෝල්ඩර් එක මකා නැවත කනෙක්ට් කරන්න.');
             }
         }
     });
