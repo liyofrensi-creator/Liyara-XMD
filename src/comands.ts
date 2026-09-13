@@ -27,24 +27,26 @@ export async function handleMessages(sock: any, m: WAMessage) {
 🕊️ ® *Powered By Liyo Dev*
         `;
 
-        // 1. ෆොටෝ එකයි ටෙක්ස්ට් එකයි යැවීම
         await sock.sendMessage(sender, {
             image: { url: config.menuImage },
             caption: aliveText.trim()
         }, { quoted: m });
 
-        // 2. Alive Voice Note එක යැවීම
-        await sock.sendMessage(sender, {
-            audio: fs.readFileSync('./media/alive.mp3'),
-            mimetype: 'audio/mp4',
-            ptt: true
-        }, { quoted: m });
+        try {
+            await sock.sendMessage(sender, {
+                audio: fs.readFileSync('./media/alive.mp3'),
+                mimetype: 'audio/mp4',
+                ptt: true
+            }, { quoted: m });
+        } catch (e) {
+            console.error('Alive audio error:', e);
+        }
     }
+
 
     else if (command === '.menu') {
         const menuText = `
 🌸 *${config.botName}* 🌸
-> *Hello ${pushName}!*
 > *reply with a number !*
 
 0️⃣ settings 🌐
@@ -59,17 +61,19 @@ export async function handleMessages(sock: any, m: WAMessage) {
 🕊️ ® *Powered By Liyara XMD*
         `;
 
-        // 1. මෙනු ෆොටෝ එකයි ටෙක්ස්ට් එකයි යැවීම
         await sock.sendMessage(sender, {
             image: { url: config.menuImage },
             caption: menuText.trim()
         }, { quoted: m });
 
-        // 2. Menu Voice Note එක යැවීම
-        await sock.sendMessage(sender, {
-            audio: fs.readFileSync('./media/menu.mp3'),
-            mimetype: 'audio/mp4',
-            ptt: true
-        }, { quoted: m });
+        try {
+            await sock.sendMessage(sender, {
+                audio: fs.readFileSync('./media/menu.mp3'),
+                mimetype: 'audio/mp4',
+                ptt: true
+            }, { quoted: m });
+        } catch (e) {
+            console.error('Menu audio error:', e);
+        }
     }
 }
