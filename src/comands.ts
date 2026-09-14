@@ -4,8 +4,9 @@ import * as path from 'path';
 import { GoogleGenAI } from '@google/genai';
 import config from './config';
 
-// Gemini AI Client එක සකස් කිරීම
+// Gemini AI Client එක සකස් කිරීම (ඔයා දුන්න නිවැරදි API key එක සමඟ)
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+
 
 export async function handleMessages(sock: any, m: WAMessage) {
     if (!m.message || m.key.fromMe) return;
@@ -89,26 +90,26 @@ export async function handleMessages(sock: any, m: WAMessage) {
     // 3. AI Smart Voice Command (.ai [prashne]) - Gemini + Fish Audio Integration
     else if (command === '.ai') {
         if (!query) {
-            await sock.sendMessage(sender, { text: `🌸 Please ask something! Example: .ai කොහොමද ඔයාට?` }, { quoted: m });
+            await sock.sendMessage(sender, { text: `🌸 Please ask something! Example: .ai Hello Liyara` }, { quoted: m });
             return;
         }
 
         try {
-            // Typing status එක පෙන්වීම
+            // බෝට් එක වොයිස් එකක් රෙකෝඩ් කරනවා වගේ පෙන්වීම
             await sock.sendPresenceUpdate('recording', sender);
 
-            // පියවර 1: Gemini මඟින් ප්‍රශ්නයට උත්තරයක් සකස් කරගැනීම (Cute Anime Waifu විදිහට English වලින්, Fish Audio එකට පහසු වීමට)
-            const prompt = `You are Liyara XMD, a cute, friendly anime girl AI assistant. User's name is ${pushName}. Answer the following question briefly and sweetly in English (so it can be spoken out loud): "${query}"`;
+            // පියවර 1: Gemini මඟින් ප්‍රශ්නයට කියුට් ඇනිමේ ගර්ල් කෙනෙක් විදිහට ඉංග්‍රීසියෙන් උත්තරයක් හදාගැනීම
+            const prompt = `You are Liyara XMD, a cute, friendly anime girl AI assistant. User's name is ${pushName}. Answer the following question briefly and sweetly in English so it can be spoken out loud: "${query}"`;
             
-            const aiResponse = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
+            const responseGemini = await ai.models.generateContent({
+                model: 'gemini-flash-latest',
                 contents: prompt,
             });
 
-            const replyText = aiResponse.text() || `Hello ${pushName}! I heard you.`;
+            const replyText = responseGemini.text || `Hello ${pushName}!`;
 
-            // පියවර 2: Gemini එකෙන් ගත්තු උත්තරේ Fish Audio API එකට යවා Voice Note එකක් ලෙස ලබාගැනීම
-            const response = await fetch("https://api.fish.audio/v1/tts", {
+            // පියවර 2: Gemini එකෙන් ගත්තු උත්තරේ Fish Audio API එකට යවා ඔයාගේ වොයිස් එකෙන් voice note එකක් හැදීම
+            const responseFish = await fetch("https://api.fish.audio/v1/tts", {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${process.env.FISH_API_KEY}`,
@@ -122,17 +123,17 @@ export async function handleMessages(sock: any, m: WAMessage) {
                 }),
             });
 
-            if (!response.ok) {
-                throw new Error(`Fish Audio API error: ${response.statusText}`);
+            if (!responseFish.ok) {
+                throw new Error(`Fish Audio API error: ${responseFish.statusText}`);
             }
 
-            const arrayBuffer = await response.arrayBuffer();
+            const arrayBuffer = await responseFish.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
 
             const tempAudioPath = path.join(__dirname, '../media/ai_voice.mp3');
             fs.writeFileSync(tempAudioPath, buffer);
 
-            // පියවර 3: WhatsApp එකට Voice Note (PTT) එක ලෙස යැවීම
+            // පියවර 3: WhatsApp එකට Voice Note (PTT) එකක් ලෙස යැවීම
             await sock.sendMessage(sender, {
                 audio: fs.readFileSync(tempAudioPath),
                 mimetype: 'audio/mp4',
