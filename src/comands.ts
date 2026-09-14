@@ -1,12 +1,9 @@
 import { WAMessage } from '@whiskeysockets/baileys';
-import * as fs from 'fs';
-import * as path from 'path';
-import { GoogleGenAI } from '@google/genai';
 import config from './config';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Gemini AI Client එක සකස් කිරීම (ඔයා දුන්න නිවැරදි API key එක සමඟ)
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-
+// Initialize Gemini API
+const genAI = new GoogleGenerativeAI(config.geminiApiKey);
 
 export async function handleMessages(sock: any, m: WAMessage) {
     if (!m.message || m.key.fromMe) return;
@@ -20,12 +17,9 @@ export async function handleMessages(sock: any, m: WAMessage) {
     if (!text) return;
 
     const commandText = text.trim();
-    const args = commandText.split(' ');
-    const command = args[0].toLowerCase();
-    const query = args.slice(1).join(' ');
+    const commandLower = commandText.toLowerCase();
 
-    // 1. Alive Command
-    if (command === '.alive') {
+    if (commandLower === '.alive') {
         const aliveText = `
 🌿 *Hello, ${pushName}* 🌿
  ──────────────────
@@ -40,21 +34,10 @@ export async function handleMessages(sock: any, m: WAMessage) {
         await sock.sendMessage(sender, {
             image: { url: config.menuImage },
             caption: aliveText.trim()
-        }, { quoted: m });
-
-        try {
-            await sock.sendMessage(sender, {
-                audio: fs.readFileSync('./media/alive.mp3'),
-                mimetype: 'audio/mp4',
-                ptt: true
-            }, { quoted: m });
-        } catch (e) {
-            console.error('Alive audio error:', e);
-        }
+        });
     }
 
-    // 2. Menu Command
-    else if (command === '.menu') {
+    else if (commandLower === '.menu') {
         const menuText = `
 🌸 *${config.botName}* 🌸
 > *reply with a number !*
@@ -74,75 +57,43 @@ export async function handleMessages(sock: any, m: WAMessage) {
         await sock.sendMessage(sender, {
             image: { url: config.menuImage },
             caption: menuText.trim()
-        }, { quoted: m });
-
-        try {
-            await sock.sendMessage(sender, {
-                audio: fs.readFileSync('./media/menu.mp3'),
-                mimetype: 'audio/mp4',
-                ptt: true
-            }, { quoted: m });
-        } catch (e) {
-            console.error('Menu audio error:', e);
-        }
+        });
     }
 
-    // 3. AI Smart Voice Command (.ai [prashne]) - Gemini + Fish Audio Integration
-    else if (command === '.ai') {
-        if (!query) {
-            await sock.sendMessage(sender, { text: `🌸 Please ask something! Example: .ai Hello Liyara` }, { quoted: m });
+    // AI Anime Waifu Command -> .aiwifu <question>
+    else if (commandText.startsWith('.aiwifu')) {
+        const promptQuery = commandText.slice(7).trim();
+
+        if (!promptQuery) {
+            await sock.sendMessage(sender, { 
+                text: "🌸 Owais... mata monava hari ahanne nathuwa kohomada oyaata cute uththara denne? Liyanna `.aiwifu <oyage prashne>` kiyala! 🥺✨" 
+            }, { quoted: m });
             return;
         }
 
         try {
-            // බෝට් එක වොයිස් එකක් රෙකෝඩ් කරනවා වගේ පෙන්වීම
-            await sock.sendPresenceUpdate('recording', sender);
+            await sock.presenceSubscribe(sender);
+            await sock.sendPresenceUpdate('composing', sender);
 
-            // පියවර 1: Gemini මඟින් ප්‍රශ්නයට කියුට් ඇනිමේ ගර්ල් කෙනෙක් විදිහට ඉංග්‍රීසියෙන් උත්තරයක් හදාගැනීම
-            const prompt = `You are Liyara XMD, a cute, friendly anime girl AI assistant. User's name is ${pushName}. Answer the following question briefly and sweetly in English so it can be spoken out loud: "${query}"`;
-            
-            const responseGemini = await ai.models.generateContent({
-                model: 'gemini-flash-latest',
-                contents: prompt,
+            const model = genAI.getGenerativeModel({
+                model: 'gemini-2.5-flash',
+                systemInstruction: `You are an extremely cute, affectionate, sweet, and adorable anime waifu girl. 
+You speak in a very warm, soft, playful, and loving tone (like an anime waifu). 
+You can use cute cute emojis like ✨, 🌸, 🥺, ❤️, 🐾, 🎀. 
+If the user speaks in Sinhala or Singlish or English, reply naturally keeping that same adorable, sweet anime waifu personality. Keep the response concise and sweet.`
             });
 
-            const replyText = responseGemini.text || `Hello ${pushName}!`;
+            const result = await model.generateContent(promptQuery);
+            const responseText = result.response.text();
 
-            // පියවර 2: Gemini එකෙන් ගත්තු උත්තරේ Fish Audio API එකට යවා ඔයාගේ වොයිස් එකෙන් voice note එකක් හැදීම
-            const responseFish = await fetch("https://api.fish.audio/v1/tts", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${process.env.FISH_API_KEY}`,
-                    "Content-Type": "application/json",
-                    "model": "s2.1-pro-free",
-                },
-                body: JSON.stringify({
-                    text: `[excited] ${replyText} [laughing]`,
-                    reference_id: "90dadc31738c4e61ab44a008c7545030",
-                    format: "mp3",
-                }),
-            });
+            await sock.sendMessage(sender, { text: responseText }, { quoted: m });
 
-            if (!responseFish.ok) {
-                throw new Error(`Fish Audio API error: ${responseFish.statusText}`);
-            }
-
-            const arrayBuffer = await responseFish.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-
-            const tempAudioPath = path.join(__dirname, '../media/ai_voice.mp3');
-            fs.writeFileSync(tempAudioPath, buffer);
-
-            // පියවර 3: WhatsApp එකට Voice Note (PTT) එකක් ලෙස යැවීම
-            await sock.sendMessage(sender, {
-                audio: fs.readFileSync(tempAudioPath),
-                mimetype: 'audio/mp4',
-                ptt: true
+        } catch (error: any) {
+            console.error("Gemini Waifu Error:", error);
+            await sock.sendMessage(sender, { 
+                text: `🥺 Aiyayo... mage podi mole tikak aul gya wage! Passe try karanna ko... (Error: ${error.message || 'Unknown'})` 
             }, { quoted: m });
-
-        } catch (error) {
-            console.error('AI Smart Voice Error:', error);
-            await sock.sendMessage(sender, { text: `Oops! My brain got a little confused. 🥺 Try again!` }, { quoted: m });
         }
     }
 }
+
