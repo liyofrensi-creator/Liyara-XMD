@@ -2,6 +2,8 @@ import { WAMessage } from '@whiskeysockets/baileys';
 import config from './config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+console.log("⚡ commands.ts loaded successfully!");
+
 // Initialize Gemini API
 const genAI = new GoogleGenerativeAI(config.geminiApiKey);
 
@@ -12,12 +14,20 @@ export async function handleMessages(sock: any, m: WAMessage) {
     if (!sender) return;
 
     const pushName = m.pushName || 'Friend';
-    const text = m.message.conversation || m.message.extendedTextMessage?.text;
+
+    // WhatsApp message types අනුව text එක නිවැරදිව grab කරගැනීම
+    const msgContent = m.message.ephemeralMessage?.message || m.message.viewOnceMessage?.message || m.message;
+    const text = msgContent?.conversation || 
+                 msgContent?.extendedTextMessage?.text || 
+                 msgContent?.imageMessage?.caption || 
+                 msgContent?.videoMessage?.caption || '';
 
     if (!text) return;
 
     const commandText = text.trim();
     const commandLower = commandText.toLowerCase();
+
+    console.log(`💬 Command Received: ${commandText} from ${sender}`);
 
     if (commandLower === '.alive') {
         const aliveText = `
@@ -96,4 +106,3 @@ If the user speaks in Sinhala or Singlish or English, reply naturally keeping th
         }
     }
 }
-
