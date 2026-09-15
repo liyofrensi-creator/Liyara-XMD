@@ -4,7 +4,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 
 console.log("⚡ commands.ts loaded successfully!");
 
-// Initialize Gemini API
 const genAI = new GoogleGenerativeAI(config.geminiApiKey);
 
 export async function handleMessages(sock: any, m: WAMessage) {
@@ -13,9 +12,11 @@ export async function handleMessages(sock: any, m: WAMessage) {
     const sender = m.key.remoteJid;
     if (!sender) return;
 
+    // Newsletter හෝ status/broadcast messages ignore කිරීම
+    if (sender.includes('@newsletter') || sender === 'status@broadcast') return;
+
     const pushName = m.pushName || 'Friend';
 
-    // WhatsApp message types අනුව text එක නිවැරදිව grab කරගැනීම
     const msgContent = m.message.ephemeralMessage?.message || m.message.viewOnceMessage?.message || m.message;
     const text = msgContent?.conversation || 
                  msgContent?.extendedTextMessage?.text || 
@@ -27,7 +28,7 @@ export async function handleMessages(sock: any, m: WAMessage) {
     const commandText = text.trim();
     const commandLower = commandText.toLowerCase();
 
-    console.log(`💬 Command Received: ${commandText} from ${sender}`);
+    console.log(`💬 Command Received: ${commandText} | From: ${sender}`);
 
     if (commandLower === '.alive') {
         const aliveText = `
@@ -70,7 +71,6 @@ export async function handleMessages(sock: any, m: WAMessage) {
         });
     }
 
-    // AI Anime Waifu Command -> .aiwifu <question>
     else if (commandText.startsWith('.aiwifu')) {
         const promptQuery = commandText.slice(7).trim();
 
