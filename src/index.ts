@@ -10,7 +10,7 @@ import pino from 'pino';
 import config from './config';
 import * as readline from 'readline';
 import { Boom } from '@hapi/boom';
-import { handleMessages } from './comands'; // <-- මෙතන './comands' වෙනුවට './commands' කියලා හැදුවා
+import { handleMessages } from './comands';
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text: string): Promise<string> => new Promise((resolve) => rl.question(text, resolve));
@@ -64,8 +64,8 @@ async function startLiyara(): Promise<void> {
         if (!messages || messages.length === 0) return;
         const m = messages[0];
 
-        // Debugging සඳහා console එකට message එක print කරගැනීමට
-        console.log("📩 Message received event triggered!");
+        // Debug log
+        console.log("📩 Upsert triggered. Type:", type);
 
         await handleMessages(sock, m);
     });
