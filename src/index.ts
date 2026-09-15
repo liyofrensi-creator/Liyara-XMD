@@ -10,7 +10,7 @@ import pino from 'pino';
 import config from './config';
 import * as readline from 'readline';
 import { Boom } from '@hapi/boom';
-import { handleMessages } from './commands'; // <-- මෙතන './comands' වෙනුවට './commands' කියලා හැදුවා
+import { handleMessages } from './comands'; // <-- මෙතන './comands' වෙනුවට './commands' කියලා හැදුවා
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text: string): Promise<string> => new Promise((resolve) => rl.question(text, resolve));
