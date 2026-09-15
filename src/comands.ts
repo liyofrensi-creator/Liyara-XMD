@@ -97,5 +97,3 @@ If the user speaks in Sinhala or Singlish or English, reply naturally keeping th
     }
 }
 
-
-1
